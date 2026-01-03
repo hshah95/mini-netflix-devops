@@ -24,7 +24,7 @@ stages:
         targetType: inline
         script: |
           Write-Host "Building Docker image..."
-          docker build -t auth-image:latest -f ./auth/Dockerfile ./mini-netflix-devops
+          docker build -t auth-image:latest -f ./auth/Dockerfile ./auth/app
 
     # Step 2: Start Minikube (Windows version)
     - task: PowerShell@2
