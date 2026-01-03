@@ -1,0 +1,37 @@
+trigger:
+- main
+
+variables:
+- group: mini-netflix-secrets  # JWT_SECRET stored here
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: BuildAndDeploy
+  displayName: Build & Deploy to Minikube
+  jobs:
+  - job: BuildDeploy
+    displayName: Build Docker & Deploy
+    steps:
+    - checkout: self
+
+    - task: Bash@3
+      displayName: "Build Docker Image & Deploy to Minikube"
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Use Minikube Docker daemon
+          eval $(minikube docker-env)
+          
+          # Build Docker image inside Minikube
+          docker build -t mini-netflix-auth:latest .
+          
+          # Inject JWT secret into deployment YAML
+          sed "s|\${JWT_SECRET}|$(JWT_SECRET)|g" k8s/auth-deployment-template.yml > k8s/auth-deployment.yaml
+          
+          # Apply deployment and service manifests
+          kubectl apply -f k8s/auth-deployment.yml
+          kubectl apply -f k8s/auth-service.yml
+
+

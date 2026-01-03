@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+spec:
+  type: NodePort                    # Minikube cannot use LoadBalancer
+  selector:
+    app: auth
+  ports:
+  - port: 5001                      # Service port
+    targetPort: 5001                # Container port
+    nodePort: 30001                 # NodePort to access externally
+
