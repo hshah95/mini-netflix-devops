@@ -42,7 +42,7 @@ stages:
         targetType: inline
         script: |
           Write-Host "Deploying auth service to Kubernetes..."
-          kubectl apply -f k8s/auth-deployment.yml
+          kubectl apply -f k8s/auth-deployment-template.yml
           kubectl apply -f k8s/auth-service.yml
 
     # Step 4: Check pods status
