@@ -2,36 +2,54 @@ trigger:
 - main
 
 variables:
-- group: mini-netflix-secrets  # JWT_SECRET stored here
+- group: mini-netflix-secrets
 
+# Use your self-hosted agent pool
 pool:
-  name: Default
+  name: Default  # Replace with your self-hosted agent pool name
 
 stages:
 - stage: BuildAndDeploy
-  displayName: Build & Deploy to Minikube
+  displayName: Build Docker Image & Deploy to Minikube
   jobs:
-  - job: BuildDeploy
-    displayName: Build Docker & Deploy
+  - job: BuildDeployJob
+    displayName: Build & Deploy Auth Service
     steps:
     - checkout: self
 
-    - task: Bash@3
-      displayName: "Build Docker Image & Deploy to Minikube"
+    # Step 1: Build Docker image
+    - task: PowerShell@2
+      displayName: Build Docker Image
       inputs:
-        targetType: 'inline'
+        targetType: inline
         script: |
-          # Use Minikube Docker daemon
-          eval $(minikube docker-env)
-          
-          # Build Docker image inside Minikube
-          docker build -t mini-netflix-auth:latest .
-          
-          # Inject JWT secret into deployment YAML
-          sed "s|\${JWT_SECRET}|$(JWT_SECRET)|g" k8s/auth-deployment-template.yml > k8s/auth-deployment.yaml
-          
-          # Apply deployment and service manifests
+          Write-Host "Building Docker image..."
+          docker build -t auth-image:latest .
+
+    # Step 2: Start Minikube (Windows version)
+    - task: PowerShell@2
+      displayName: Start Minikube
+      inputs:
+        targetType: inline
+        script: |
+          Write-Host "Starting Minikube..."
+          minikube start --driver=docker
+
+    # Step 3: Apply Kubernetes manifests
+    - task: PowerShell@2
+      displayName: Deploy to Kubernetes
+      inputs:
+        targetType: inline
+        script: |
+          Write-Host "Deploying auth service to Kubernetes..."
           kubectl apply -f k8s/auth-deployment.yml
           kubectl apply -f k8s/auth-service.yml
 
-
+    # Step 4: Check pods status
+    - task: PowerShell@2
+      displayName: Check Kubernetes Pods
+      inputs:
+        targetType: inline
+        script: |
+          kubectl get pods
+          kubectl get svc
