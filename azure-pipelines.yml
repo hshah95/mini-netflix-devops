@@ -24,7 +24,7 @@ stages:
         targetType: inline
         script: |
           Write-Host "Building Docker image..."
-          docker build -t auth-image:latest .
+          docker build -t auth-image:latest ./auth/Dockerfile
 
     # Step 2: Start Minikube (Windows version)
     - task: PowerShell@2
