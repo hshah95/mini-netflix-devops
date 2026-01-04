@@ -15,6 +15,7 @@ spec:
       containers:
       - name: auth
         image: mini-netflix-auth:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 5000
         env:

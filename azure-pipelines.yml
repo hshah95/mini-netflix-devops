@@ -4,9 +4,8 @@ trigger:
 variables:
 - group: mini-netflix-secrets
 
-# Use your self-hosted agent pool
 pool:
-  name: Default  # Replace with your self-hosted agent pool name
+  name: Default   # self-hosted agent
 
 stages:
 - stage: BuildAndDeploy
@@ -17,37 +16,43 @@ stages:
     steps:
     - checkout: self
 
-    # Step 1: Build Docker image
-    - task: PowerShell@2
-      displayName: Build Docker Image
-      inputs:
-        targetType: inline
-        script: |
-          Write-Host "Building Docker image..."
-          docker build -t auth-image:latest -f ./auth/Dockerfile ./auth/app
-
-    # Step 2: Start Minikube (Windows version)
+    # Step 1: Start Minikube
     - task: PowerShell@2
       displayName: Start Minikube
       inputs:
         targetType: inline
         script: |
-          Write-Host "Starting Minikube..."
-          minikube start --driver=docker
+          minikube status || minikube start --driver=docker
 
-    # Step 3: Apply Kubernetes manifests
+    # Step 2: Point Docker to Minikube
+    - task: PowerShell@2
+      displayName: Configure Docker to use Minikube
+      inputs:
+        targetType: inline
+        script: |
+          & minikube -p minikube docker-env --shell powershell | Invoke-Expression
+          docker info | findstr Name
+
+    # Step 3: Build Docker image INSIDE Minikube
+    - task: PowerShell@2
+      displayName: Build Docker Image
+      inputs:
+        targetType: inline
+        script: |
+          docker build -t auth-image:latest -f ./auth/Dockerfile ./auth/app
+
+    # Step 4: Deploy to Kubernetes
     - task: PowerShell@2
       displayName: Deploy to Kubernetes
       inputs:
         targetType: inline
         script: |
-          Write-Host "Deploying auth service to Kubernetes..."
           kubectl apply -f k8s/auth-deployment-template.yml
           kubectl apply -f k8s/auth-service.yml
 
-    # Step 4: Check pods status
+    # Step 5: Verify
     - task: PowerShell@2
-      displayName: Check Kubernetes Pods
+      displayName: Verify Deployment
       inputs:
         targetType: inline
         script: |
