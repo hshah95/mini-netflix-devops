@@ -5,7 +5,7 @@ variables:
 - group: mini-netflix-secrets
 
 pool:
-  name: Default   # self-hosted agent
+  name: Default   # self-hosted agent running on same machine as Minikube
 
 stages:
 - stage: BuildAndDeploy
@@ -16,15 +16,30 @@ stages:
     steps:
     - checkout: self
 
-    # Step 1: Start Minikube
+    # Step 1: Start Minikube (PowerShell-safe)
     - task: PowerShell@2
       displayName: Start Minikube
       inputs:
         targetType: inline
         script: |
-          minikube status || minikube start --driver=docker
+          minikube status
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Minikube not running. Starting Minikube..."
+            minikube start --driver=docker
+          } else {
+            Write-Host "Minikube already running."
+          }
 
-    # Step 2: Point Docker to Minikube
+    # Step 2: Ensure kubectl is pointing to Minikube
+    - task: PowerShell@2
+      displayName: Set kubectl context
+      inputs:
+        targetType: inline
+        script: |
+          kubectl config use-context minikube
+          kubectl get nodes
+
+    # Step 3: Point Docker to Minikube Docker daemon
     - task: PowerShell@2
       displayName: Configure Docker to use Minikube
       inputs:
@@ -33,15 +48,16 @@ stages:
           & minikube -p minikube docker-env --shell powershell | Invoke-Expression
           docker info | findstr Name
 
-    # Step 3: Build Docker image INSIDE Minikube
+    # Step 4: Build Docker image INSIDE Minikube
     - task: PowerShell@2
       displayName: Build Docker Image
       inputs:
         targetType: inline
         script: |
           docker build -t auth-image:latest -f ./auth/Dockerfile ./auth/app
+          docker images | findstr auth-image
 
-    # Step 4: Deploy to Kubernetes
+    # Step 5: Deploy Kubernetes manifests
     - task: PowerShell@2
       displayName: Deploy to Kubernetes
       inputs:
@@ -50,7 +66,7 @@ stages:
           kubectl apply -f k8s/auth-deployment-template.yml
           kubectl apply -f k8s/auth-service.yml
 
-    # Step 5: Verify
+    # Step 6: Verify deployment
     - task: PowerShell@2
       displayName: Verify Deployment
       inputs:
