@@ -7,7 +7,7 @@ spec:
   selector:
     app: auth
   ports:
-  - port: 5001                      # Service port
-    targetPort: 5001                # Container port
+  - port: 5000                      # Service port
+    targetPort: 5000                # Container port
     nodePort: 30001                 # NodePort to access externally
 
