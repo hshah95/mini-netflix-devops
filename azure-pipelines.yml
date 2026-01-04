@@ -22,8 +22,8 @@ stages:
       inputs:
         targetType: inline
         script: |
-          minikube status
-          if ($LASTEXITCODE -ne 0) {
+          $status = minikube status --format "{{.Host}}"
+          if ($status -ne "Running") {
             Write-Host "Minikube not running. Starting Minikube..."
             minikube start --driver=docker
           } else {
@@ -45,6 +45,7 @@ stages:
       inputs:
         targetType: inline
         script: |
+          Write-Host "Switching Docker to Minikube daemon..."
           & minikube -p minikube docker-env --shell powershell | Invoke-Expression
           docker info | findstr Name
 
@@ -54,6 +55,7 @@ stages:
       inputs:
         targetType: inline
         script: |
+          Write-Host "Building Docker image inside Minikube..."
           docker build -t auth-image:latest -f ./auth/Dockerfile ./auth/app
           docker images | findstr auth-image
 
@@ -63,6 +65,7 @@ stages:
       inputs:
         targetType: inline
         script: |
+          Write-Host "Applying Kubernetes manifests..."
           kubectl apply -f k8s/auth-deployment-template.yml
           kubectl apply -f k8s/auth-service.yml
 
@@ -72,5 +75,6 @@ stages:
       inputs:
         targetType: inline
         script: |
+          Write-Host "Checking pods and services..."
           kubectl get pods
           kubectl get svc
